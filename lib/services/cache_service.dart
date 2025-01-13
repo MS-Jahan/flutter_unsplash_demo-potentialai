@@ -1,10 +1,12 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/photo.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 class CacheService {
   static const String _photoBoxName = 'photos';
   static const String _photoListKey = 'photo_list';
   static const Duration _cacheValidity = Duration(hours: 24);
+  static final _cacheManager = DefaultCacheManager();
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -37,7 +39,14 @@ class CacheService {
   }
 
   static Future<void> clearCache() async {
-    final box = Hive.box(_photoBoxName);
-    await box.clear();
+    // Clear image cache
+    await _cacheManager.emptyCache();
+    
+    // Clear Hive cache
+    Hive.box(_photoBoxName).clear();
+    Hive.box(_photoListKey).clear();
+    
+    // Clear any other possible cache
+    // Add any additional cache clearing logic here
   }
-} 
+}

@@ -7,6 +7,7 @@ import '../models/photo.dart';
 import '../services/unsplash_service.dart';
 import 'detail_screen.dart';
 import 'search_results_screen.dart';
+import '../screens/settings_screen.dart';
 
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});
@@ -204,6 +205,15 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
         title: const Text('Unsplash Gallery'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.search),
             onPressed: _toggleSearchBar,
           ),
@@ -305,23 +315,20 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
                   ),
                 ),
               ),
-              child: Hero(
-                tag: photo.id,
-                child: CachedNetworkImage(
-                  imageUrl: photo.urls['small']!,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[300],
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                    ),
+              child: CachedNetworkImage(
+                imageUrl: photo.urls['small']!,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[300],
+                  child: const Center(
+                    child: CircularProgressIndicator(),
                   ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.grey[300],
-                    child: const Icon(
-                      Icons.error_outline,
-                      color: Colors.red,
-                    ),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[300],
+                  child: const Icon(
+                    Icons.error_outline,
+                    color: Colors.red,
                   ),
                 ),
               ),
