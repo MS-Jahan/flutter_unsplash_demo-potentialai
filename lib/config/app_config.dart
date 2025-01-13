@@ -1,10 +1,14 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:meta/meta.dart';
 
 class AppConfig {
   static const String unsplashApiUrl = 'https://api.unsplash.com';
   
-  // Get access key from .env file
+  static String? _testAccessKey;
+  
+  // Get access key from .env file or test override
   static String get unsplashAccessKey => 
+      _testAccessKey ??
       dotenv.env['UNSPLASH_ACCESS_KEY'] ?? 
       const String.fromEnvironment(
         'UNSPLASH_ACCESS_KEY',
@@ -19,5 +23,17 @@ class AppConfig {
       );
     }
     return true;
+  }
+
+  // For testing purposes only
+  @visibleForTesting
+  static void overrideValues({String? unsplashAccessKey}) {
+    _testAccessKey = unsplashAccessKey;
+  }
+
+  // Reset overrides (useful for tearDown in tests)
+  @visibleForTesting
+  static void resetOverrides() {
+    _testAccessKey = null;
   }
 } 

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../models/photo.dart';
-import 'dart:developer' as dev;
+// import 'dart:developer' as dev;
 
 class UnsplashService {
   static const String _baseUrl = AppConfig.unsplashApiUrl;
