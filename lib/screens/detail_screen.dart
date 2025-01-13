@@ -323,16 +323,30 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
                       errorWidget: (context, url, error) => Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
-                            Icons.error_outline,
-                            color: Colors.red,
-                            size: 60,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Failed to load image',
-                            style: TextStyle(color: Colors.red[300]),
-                          ),
+                            FutureBuilder(
+                            future: Future.delayed(const Duration(milliseconds: 600)),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const SizedBox.shrink();
+                              } else {
+                              return Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                const Icon(
+                                  Icons.error_outline,
+                                  color: Colors.red,
+                                  size: 60,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Failed to load image',
+                                  style: TextStyle(color: Colors.red[300]),
+                                ),
+                                ],
+                              );
+                              }
+                            },
+                            ),
                         ],
                       ),
                     ),
