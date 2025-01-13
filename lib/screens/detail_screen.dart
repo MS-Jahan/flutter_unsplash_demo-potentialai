@@ -14,14 +14,25 @@ class DetailScreen extends StatefulWidget {
   State<DetailScreen> createState() => _DetailScreenState();
 }
 
-class _DetailScreenState extends State<DetailScreen> {
+class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMixin {
   bool _isZoomed = false;
   final TransformationController _transformationController = TransformationController();
   TapDownDetails? _doubleTapDetails;
+  late final AnimationController _animationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+  }
 
   @override
   void dispose() {
     _transformationController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -33,15 +44,42 @@ class _DetailScreenState extends State<DetailScreen> {
     if (_doubleTapDetails == null) return;
 
     if (_isZoomed) {
-      // If zoomed in, zoom out to initial position
-      _transformationController.value = Matrix4.identity();
+      // If zoomed in, zoom out to initial position with animation
+      final animation = Matrix4Tween(
+        begin: _transformationController.value,
+        end: Matrix4.identity(),
+      ).animate(CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOutCubic,
+      ));
+      
+      animation.addListener(() {
+        _transformationController.value = animation.value;
+      });
+      
+      _animationController
+        ..reset()
+        ..forward();
     } else {
-      // If zoomed out, zoom in on the double-tap position
+      // If zoomed out, zoom in on the double-tap position with animation
       final position = _doubleTapDetails!.localPosition;
-      final newMatrix = Matrix4.identity()
-        ..translate(-position.dx * 2, -position.dy * 2)
-        ..scale(3.0);
-      _transformationController.value = newMatrix;
+      final animation = Matrix4Tween(
+        begin: _transformationController.value,
+        end: Matrix4.identity()
+          ..translate(-position.dx * 2, -position.dy * 2)
+          ..scale(3.0),
+      ).animate(CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOutCubic,
+      ));
+      
+      animation.addListener(() {
+        _transformationController.value = animation.value;
+      });
+      
+      _animationController
+        ..reset()
+        ..forward();
     }
     
     // Update zoom state
