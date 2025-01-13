@@ -44,18 +44,26 @@ class Photo {
   });
 
   factory Photo.fromJson(Map<String, dynamic> json) {
+    final urlsData = json['urls'];
+    final linksData = json['links'];
     return Photo(
-      id: json['id'] as String,
+      id: (json['id'] as String?) ?? '',
       description: json['description'] as String?,
       altDescription: json['alt_description'] as String?,
-      urls: Map<String, String>.from(json['urls'] as Map),
-      links: Map<String, String>.from(json['links'] as Map),
+      urls: (urlsData is Map)
+        ? Map<String, String>.from(urlsData)
+        : <String, String>{},
+      links: (linksData is Map)
+        ? Map<String, String>.from(linksData)
+        : <String, String>{},
       color: json['color'] as String?,
       likes: json['likes'] as int?,
-      user: PhotoUser.fromJson(json['user'] as Map<String, dynamic>),
+      user: PhotoUser.fromJson(json['user'] as Map<String, dynamic>? ?? {}),
       updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
     );
   }
+
+  String? get alt_description => altDescription;
 }
 
 @HiveType(typeId: 1)
@@ -81,12 +89,12 @@ class PhotoUser {
 
   factory PhotoUser.fromJson(Map<String, dynamic> json) {
     return PhotoUser(
-      id: json['id'] as String,
-      username: json['username'] as String,
-      name: json['name'] as String,
+      id: (json['id'] as String?) ?? '',
+      username: (json['username'] as String?) ?? '',
+      name: (json['name'] as String?) ?? '',
       profileImage: json['profile_image'] != null
           ? Map<String, String>.from(json['profile_image'] as Map)
           : null,
     );
   }
-} 
+}

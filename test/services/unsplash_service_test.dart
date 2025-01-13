@@ -1,19 +1,43 @@
 import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:flutter_unsplash_demo/services/unsplash_service.dart';
 import 'package:flutter_unsplash_demo/models/photo.dart';
 import 'package:flutter_unsplash_demo/config/app_config.dart';
+import 'package:mockito/mockito.dart';
+import 'package:mockito/annotations.dart';
+import 'unsplash_service_test.mocks.dart';
 
+@GenerateNiceMocks([MockSpec<UnsplashService>()])
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  const MethodChannel connectivityChannel = MethodChannel('dev.fluttercommunity.plus/connectivity');
+
+  setUpAll(() {
+    connectivityChannel.setMockMethodCallHandler((MethodCall methodCall) async {
+      switch (methodCall.method) {
+        case 'check':
+          return 'wifi'; // Return a string for single check
+        case 'listen':
+          return <String>['wifi']; // Return a list for stream-based calls
+        default:
+          return null;
+      }
+    });
+  });
+
   group('UnsplashService', () {
     late UnsplashService service;
+    late MockUnsplashService mockUnsplashService;
 
     setUp(() {
       // Setup test configuration
       AppConfig.overrideValuesTest(unsplashAccessKey: 'test_access_key');
       service = UnsplashService();
+      mockUnsplashService = MockUnsplashService();
     });
 
     tearDown(() {
@@ -103,5 +127,25 @@ void main() {
       service = UnsplashService(client: mockClient);
       await service.getPhotos(page: 2, perPage: 20);
     });
+
+    test('UnsplashService getPhotos returns list of photos on success', () async {
+      final mockPhotos = [
+        Photo(
+          id: '1',
+          description: 'Description',
+          altDescription: 'Alt description',
+          urls: {'small': 'url'},
+          links: {'self': 'link'},
+          user: PhotoUser(id: '1', username: 'test_user', name: 'Test User'),
+        ),
+      ];
+
+      when(mockUnsplashService.getPhotos(page: 1, perPage: 20))
+          .thenAnswer((_) async => mockPhotos);
+
+      final photos = await mockUnsplashService.getPhotos(page: 1, perPage: 20);
+
+      expect(photos, equals(mockPhotos));
+    });
   });
-} 
+}

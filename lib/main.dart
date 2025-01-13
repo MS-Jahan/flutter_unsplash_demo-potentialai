@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_unsplash_demo/services/unsplash_service.dart';
 import 'package:provider/provider.dart';
 import 'config/app_config.dart';
 import 'screens/gallery_screen.dart';
@@ -33,7 +34,7 @@ class UnsplashGalleryApp extends StatelessWidget {
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
       themeMode: themeProvider.themeMode ?? ThemeMode.system,
-      home: const GalleryScreen(),
+      home: GalleryScreen(unsplashService: UnsplashService(),),
     );
   }
 }

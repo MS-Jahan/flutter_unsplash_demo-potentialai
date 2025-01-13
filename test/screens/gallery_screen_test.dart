@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_unsplash_demo/screens/gallery_screen.dart';
@@ -65,16 +66,12 @@ void main() {
       (WidgetTester tester) async {
     final mockPhotos = [
       Photo(
-        id: 'test_id',
-        description: 'Test photo',
-        alt_description: 'Alt description',
-        urls: {
-          'thumb': 'thumb_url',
-          'full': 'full_url',
-          'raw': 'raw_url',
-        },
-        links: {'self': 'self_link'},
-        user: PhotoUser(username: 'test_user', name: 'Test User'),
+        id: '1',
+        description: 'Description',
+        altDescription: 'Alt description',
+        urls: {'small': 'url'},
+        links: {'self': 'link'},
+        user: PhotoUser(id: '1', username: 'test_user', name: 'Test User'),
       ),
     ];
 
@@ -94,7 +91,7 @@ void main() {
     // Verify grid and photo cards
     expect(find.byType(GridView), findsOneWidget);
     expect(find.byType(Card), findsAtLeastNWidgets(1));
-    expect(find.byType(Image), findsAtLeastNWidgets(1));
+    expect(find.byType(CachedNetworkImage), findsAtLeastNWidgets(1));
   });
 
   testWidgets('GalleryScreen loads more photos on scroll',
@@ -112,16 +109,20 @@ void main() {
         id: 'test_id_$i',
         description: 'Test photo $i',
         urls: {
-          'thumb': 'thumb_url',
-          'full': 'full_url',
-          'raw': 'raw_url',
+          'small': 'thumb_url_$i',
+          'regular': 'regular_url_$i',
+          'raw': 'raw_url_$i',
         },
         links: {'self': 'self_link'},
-        user: PhotoUser(username: 'test_user', name: 'Test User'),
+        user: PhotoUser(
+          id: 'user_$i',
+          username: 'test_user',
+          name: 'Test User',
+        ),
       ),
     );
 
-    // Setup mock responses for both pages explicitly
+    // Setup mock responses for initial load and scroll load
     when(mockUnsplashService.getPhotos(page: 1, perPage: 20))
         .thenAnswer((_) async => mockPhotos);
     when(mockUnsplashService.getPhotos(page: 2, perPage: 20))
@@ -133,30 +134,19 @@ void main() {
       ),
     );
 
-    // Wait for initial load and verify
+    // Wait for initial load
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
+
+    // Verify initial load
     verify(mockUnsplashService.getPhotos(page: 1, perPage: 20)).called(1);
 
-    // Calculate scroll distance to trigger load more (80% of list)
-    final scrollDistance = -(screenHeight * 0.9);
-    
-    // Find the grid view
-    final gridView = find.byType(GridView);
-    expect(gridView, findsOneWidget);
-
-    // Scroll in smaller increments
-    for (var i = 0; i < 3; i++) {
-      await tester.drag(gridView, Offset(0, scrollDistance / 3));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-    }
-
-    // Wait for potential load more trigger
+    // Scroll to trigger load more
+    await tester.drag(find.byType(GridView), const Offset(0, -1000));
     await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
 
-    // Verify second page was requested
+    // Verify second page load
     verify(mockUnsplashService.getPhotos(page: 2, perPage: 20)).called(1);
   });
 
@@ -197,4 +187,4 @@ void main() {
     verify(mockUnsplashService.getPhotos(page: 1, perPage: 20)).called(2);
     // calls.called(2);
   });
-} 
+}

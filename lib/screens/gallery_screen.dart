@@ -10,23 +10,28 @@ import 'search_results_screen.dart';
 import '../screens/settings_screen.dart';
 import 'dart:developer' as dev;
 
+extension ObjectExt<T> on T? {
+  R? let<R>(R Function(T) block) => this != null ? block(this!) : null;
+}
+
 class GalleryScreen extends StatefulWidget {
-  const GalleryScreen({super.key});
+  final UnsplashService unsplashService;
+
+  const GalleryScreen({super.key, required this.unsplashService});
 
   @override
   State<GalleryScreen> createState() => _GalleryScreenState();
 }
 
 class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProviderStateMixin {
-  final UnsplashService _unsplashService = UnsplashService();
   final List<Photo> _photos = [];
   bool _isLoading = false;
   bool _hasError = false;
   String _errorMessage = '';
   int _currentPage = 1;
   final ScrollController _scrollController = ScrollController();
-  static const int _initialPages = 2;
-  static const int _photosPerPage = 40;
+  static const int _initialPages = 1;
+  static const int _photosPerPage = 20;
   bool _isSearchBarVisible = false;
   late final AnimationController _animationController;
   late final Animation<Offset> _slideAnimation;
@@ -63,7 +68,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
   @override
   void dispose() {
     _scrollController.dispose();
-    _unsplashService.dispose();
+    widget.unsplashService.dispose();
     _animationController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -71,7 +76,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
   }
 
   void _setupBackgroundUpdateListener() {
-    _unsplashService.onPhotosUpdated = (List<Photo> freshPhotos) {
+    widget.unsplashService.onPhotosUpdated = (List<Photo> freshPhotos) {
       if (mounted) {
         setState(() {
           // Replace the first page of photos with fresh data
@@ -103,7 +108,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
 
     try {
       for (int i = 1; i <= _initialPages; i++) {
-        final photos = await _unsplashService.getPhotos(page: i, perPage: _photosPerPage);
+        final photos = await widget.unsplashService.getPhotos(page: i, perPage: _photosPerPage);
         if (mounted) {
           setState(() {
             _photos.addAll(photos);
@@ -135,7 +140,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
     });
 
     try {
-      final photos = await _unsplashService.getPhotos(
+      final photos = await widget.unsplashService.getPhotos(
         page: _currentPage,
         perPage: _photosPerPage,
       );
@@ -268,6 +273,9 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Show an error icon so the test can find it
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
             Text(_errorMessage),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -295,7 +303,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
           if (index == _photos.length) {
             return const Center(child: CircularProgressIndicator());
           }
-  
+
           final photo = _photos[index];
           final uniqueTag = '${photo.id}_$index'; // Create a unique tag
           return Card(
@@ -308,11 +316,13 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
                 context,
                 MaterialPageRoute(
                   builder: (context) => DetailScreen(
-                    imageUrl: photo.urls['regular'],
-                    rawImageUrl: photo.urls['raw'],
-                    title: photo.description ?? photo.altDescription ?? 'Photo by ${photo.user.name}',
-                    authorName: photo.user.name,
-                    dateTime: photo.updatedAt != null ? DateFormat('dd MMM, yyyy').format(photo.updatedAt!) : '',
+                    imageUrl: photo.urls['regular'] ?? '',
+                    rawImageUrl: photo.urls['raw'] ?? '',
+                    title: photo.description
+                      ?? photo.altDescription
+                      ?? 'Photo by ${photo.user?.name ?? 'Unknown'}',
+                    authorName: photo.user?.name ?? 'Unknown',
+                    dateTime: photo.updatedAt?.let((date) => DateFormat('dd MMM, yyyy').format(date)) ?? '',
                     likes: photo.likes ?? 0,
                     tag: uniqueTag, // Pass the unique tag to the DetailScreen
                   ),
@@ -321,7 +331,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
               child: Hero(
                 tag: uniqueTag,
                 child: CachedNetworkImage(
-                  imageUrl: photo.urls['small']!,
+                  imageUrl: photo.urls['small'] ?? '',
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
                     color: Colors.grey[300],
@@ -339,9 +349,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
                 ),
               ),
             ),
-          );
-        },
-      ),
+          );        },      ),
     );
   }
 
