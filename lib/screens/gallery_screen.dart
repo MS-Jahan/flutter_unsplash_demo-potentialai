@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../models/photo.dart';
 import '../services/unsplash_service.dart';
 import 'detail_screen.dart';
+import 'search_results_screen.dart';
 
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});
@@ -22,6 +23,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
   String _errorMessage = '';
   int _currentPage = 1;
   final ScrollController _scrollController = ScrollController();
+  static const int _initialPages = 2;
   static const int _photosPerPage = 40;
   bool _isSearchBarVisible = false;
   late final AnimationController _animationController;
@@ -35,7 +37,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
     super.initState();
     _setupScrollListener();
     _setupBackgroundUpdateListener();
-    _loadPhotos();
+    _loadInitialPhotos();
     
     _animationController = AnimationController(
       vsync: this,
@@ -86,6 +88,39 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
         _loadMorePhotos();
       }
     });
+  }
+
+  Future<void> _loadInitialPhotos() async {
+    if (_isLoading) return;
+
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+      _errorMessage = '';
+    });
+
+    try {
+      for (int i = 1; i <= _initialPages; i++) {
+        final photos = await _unsplashService.getPhotos(page: i, perPage: _photosPerPage);
+        if (mounted) {
+          setState(() {
+            _photos.addAll(photos);
+            _currentPage++;
+          });
+        }
+      }
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadPhotos() async {
@@ -151,6 +186,17 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
     }
   }
 
+  void _handleSearch(String query) {
+    if (query.isNotEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SearchResultsScreen(query: query),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -195,9 +241,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 20.0),
                     ),
-                    onSubmitted: (query) {
-                      // Handle search query submission
-                    },
+                    onSubmitted: _handleSearch,
                   ),
                 ),
               ),
