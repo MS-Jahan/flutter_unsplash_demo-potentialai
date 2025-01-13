@@ -21,7 +21,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   String _errorMessage = '';
   int _currentPage = 1;
   final ScrollController _scrollController = ScrollController();
-  static const int _photosPerPage = 20;
+  static const int _photosPerPage = 40;
 
   @override
   void initState() {
@@ -142,12 +142,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
       onRefresh: _refreshPhotos,
       child: GridView.builder(
         controller: _scrollController,
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(4),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
+          crossAxisCount: 4,
           childAspectRatio: 1,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
+          crossAxisSpacing: 4,
+          mainAxisSpacing: 4,
         ),
         itemCount: _photos.length + (_isLoading ? 1 : 0),
         itemBuilder: (context, index) {
