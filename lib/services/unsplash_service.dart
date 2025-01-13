@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/material.dart';
 import '../config/app_config.dart';
 import '../models/photo.dart';
 import 'cache_service.dart';
@@ -73,6 +74,7 @@ class UnsplashService {
         throw Exception('Failed to load photos: ${response.statusCode}');
       }
     } catch (e) {
+      _showErrorSnackbar('Failed to load photos: $e');
       throw Exception('Failed to load photos: $e');
     }
   }
@@ -98,6 +100,7 @@ class UnsplashService {
         throw Exception('Failed to search photos: ${response.statusCode}');
       }
     } catch (e) {
+      _showErrorSnackbar('Failed to search photos: $e');
       throw Exception('Failed to search photos: $e');
     }
   }
@@ -110,6 +113,21 @@ class UnsplashService {
       // Silently fail as we still have cached data to show
       print('Background refresh failed: $e');
     }
+  }
+
+  void _showErrorSnackbar(String message) {
+    final context = _getContext();
+    if (context != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+  }
+
+  BuildContext? _getContext() {
+    // Implement a way to get the current BuildContext
+    // This could be done by passing the context from the UI layer
+    return null;
   }
 
   void dispose() {

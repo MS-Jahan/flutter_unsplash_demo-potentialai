@@ -12,7 +12,7 @@ void main() {
 
     setUp(() {
       // Setup test configuration
-      AppConfig.overrideValues(unsplashAccessKey: 'test_access_key');
+      AppConfig.overrideValuesTest(unsplashAccessKey: 'test_access_key');
       service = UnsplashService();
     });
 

@@ -5,9 +5,11 @@ class AppConfig {
   static const String unsplashApiUrl = 'https://api.unsplash.com';
   
   static String? _testAccessKey;
+  static String? _manualAccessKey;
   
   // Get access key from .env file or test override
   static String get unsplashAccessKey => 
+      _manualAccessKey ??
       _testAccessKey ??
       dotenv.env['UNSPLASH_ACCESS_KEY'] ?? 
       const String.fromEnvironment(
@@ -27,13 +29,19 @@ class AppConfig {
 
   // For testing purposes only
   @visibleForTesting
-  static void overrideValues({String? unsplashAccessKey}) {
+  static void overrideValuesTest({String? unsplashAccessKey}) {
+    _manualAccessKey = unsplashAccessKey;
     _testAccessKey = unsplashAccessKey;
+  }
+
+  static void overrideValues({String? unsplashAccessKey}) {
+    _manualAccessKey = unsplashAccessKey;
   }
 
   // Reset overrides (useful for tearDown in tests)
   @visibleForTesting
   static void resetOverrides() {
+    _manualAccessKey = null;
     _testAccessKey = null;
   }
-} 
+}

@@ -4,7 +4,7 @@ class MockAppConfig extends AppConfig {
   static const testAccessKey = 'test_access_key_12345';
   
   static void setupTest() {
-    AppConfig.overrideValues(
+    AppConfig.overrideValuesTest(
       unsplashAccessKey: testAccessKey,
     );
   }

@@ -14,7 +14,7 @@ void main() {
   late MockUnsplashService mockUnsplashService;
 
   setUp(() {
-    AppConfig.overrideValues(unsplashAccessKey: 'test_access_key');
+    AppConfig.overrideValuesTest(unsplashAccessKey: 'test_access_key');
     mockUnsplashService = MockUnsplashService();
   });
 
