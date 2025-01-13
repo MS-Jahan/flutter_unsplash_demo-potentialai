@@ -2,9 +2,13 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:gal/gal.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+
+typedef DownloadStatusCallback = void Function(String message);
 
 class GalleryService {
   static Dio? _dio;
+  static final _cacheManager = DefaultCacheManager();
 
   static Dio get dio {
     _dio ??= Dio();
@@ -28,11 +32,45 @@ class GalleryService {
     return '${tempDir.path}/$filename.jpg';
   }
 
-  /// Downloads an image to a temporary file
-  static Future<(bool, String)> downloadImage(String imageUrl, String tempPath) async {
+  /// Checks if an image is cached and returns its file path
+  static Future<String?> getCachedFilePath(String imageUrl) async {
     try {
+      final fileInfo = await _cacheManager.getFileFromCache(imageUrl);
+      return fileInfo?.file.path;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Downloads an image to a temporary file, using cache if available
+  static Future<(bool, String)> downloadImage(
+    String imageUrl, 
+    String tempPath, {
+    DownloadStatusCallback? onDownloadStarted,
+  }) async {
+    try {
+      // Check if image is cached
+      final cachedPath = await getCachedFilePath(imageUrl);
+      if (cachedPath != null) {
+        // Copy cached file to temp path
+        await File(cachedPath).copy(tempPath);
+        return (true, 'Image retrieved from cache');
+      }
+
+      // If not cached, notify download start
+      onDownloadStarted?.call('Image is being downloaded...');
+
+      // Download and cache
       await dio.download(imageUrl, tempPath);
-      return (true, 'Image downloaded successfully');
+      
+      // Cache the downloaded file
+      await _cacheManager.putFile(
+        imageUrl,
+        await File(tempPath).readAsBytes(),
+        fileExtension: 'jpg',
+      );
+
+      return (true, 'Image downloaded and cached successfully');
     } on DioException catch (e) {
       return (false, 'Failed to download image: ${e.message}');
     } catch (e) {
@@ -40,7 +78,11 @@ class GalleryService {
     }
   }
 
-  static Future<(bool, String)> saveImage(String imageUrl, String filename) async {
+  static Future<(bool, String)> saveImage(
+    String imageUrl, 
+    String filename, {
+    DownloadStatusCallback? onDownloadStarted,
+  }) async {
     try {
       if (!await requestPermissions()) {
         return (false, 'Permission denied to save photos');
@@ -49,8 +91,12 @@ class GalleryService {
       // Get temporary file path
       final tempPath = await getTemporaryFilePath(filename);
 
-      // Download image
-      final (success, message) = await downloadImage(imageUrl, tempPath);
+      // Download image or get from cache
+      final (success, message) = await downloadImage(
+        imageUrl, 
+        tempPath,
+        onDownloadStarted: onDownloadStarted,
+      );
       if (!success) {
         return (false, message);
       }

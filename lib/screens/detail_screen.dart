@@ -51,15 +51,26 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
 
     setState(() => _isSaving = true);
     try {
-      await GalleryService.saveImage(
+      final (success, message) = await GalleryService.saveImage(
         widget.rawImageUrl ?? widget.imageUrl!,
         'unsplash_${DateTime.now().millisecondsSinceEpoch}',
+        onDownloadStarted: (message) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: Colors.blue,
+              ),
+            );
+          }
+        },
       );
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Image saved to gallery'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: Text(success ? message : 'Failed: $message'),
+            backgroundColor: success ? Colors.green : Colors.red,
           ),
         );
       }
@@ -87,6 +98,16 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
       await ShareService.shareImage(
         widget.rawImageUrl ?? widget.imageUrl!,
         widget.title,
+        onDownloadStarted: (message) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: Colors.blue,
+              ),
+            );
+          }
+        },
       );
     } catch (e) {
       if (mounted) {
