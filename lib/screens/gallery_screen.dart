@@ -14,7 +14,7 @@ class GalleryScreen extends StatefulWidget {
   State<GalleryScreen> createState() => _GalleryScreenState();
 }
 
-class _GalleryScreenState extends State<GalleryScreen> {
+class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProviderStateMixin {
   final UnsplashService _unsplashService = UnsplashService();
   final List<Photo> _photos = [];
   bool _isLoading = false;
@@ -23,6 +23,12 @@ class _GalleryScreenState extends State<GalleryScreen> {
   int _currentPage = 1;
   final ScrollController _scrollController = ScrollController();
   static const int _photosPerPage = 40;
+  bool _isSearchBarVisible = false;
+  late final AnimationController _animationController;
+  late final Animation<Offset> _slideAnimation;
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  bool _isSearchFieldNotEmpty = false;
 
   @override
   void initState() {
@@ -30,12 +36,33 @@ class _GalleryScreenState extends State<GalleryScreen> {
     _setupScrollListener();
     _setupBackgroundUpdateListener();
     _loadPhotos();
+    
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, -1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+
+    _searchController.addListener(() {
+      setState(() {
+        _isSearchFieldNotEmpty = _searchController.text.isNotEmpty;
+      });
+    });
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
     _unsplashService.dispose();
+    _animationController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -106,6 +133,24 @@ class _GalleryScreenState extends State<GalleryScreen> {
     await _loadPhotos();
   }
 
+  void _toggleSearchBar() {
+    if (_isSearchBarVisible) {
+      _animationController.reverse().then((_) {
+        setState(() {
+          _isSearchBarVisible = false;
+          _searchFocusNode.unfocus();
+        });
+      });
+    } else {
+      setState(() {
+        _isSearchBarVisible = true;
+      });
+      _animationController.forward().then((_) {
+        _searchFocusNode.requestFocus();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -113,12 +158,52 @@ class _GalleryScreenState extends State<GalleryScreen> {
         title: const Text('Unsplash Gallery'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: _toggleSearchBar,
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _refreshPhotos,
           ),
         ],
       ),
-      body: _buildBody(),
+      body: Stack(
+        children: [
+          _buildBody(),
+          if (_isSearchBarVisible)
+            SlideTransition(
+              position: _slideAnimation,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Material(
+                  elevation: 4.0,
+                  borderRadius: BorderRadius.circular(8.0),
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    decoration: InputDecoration(
+                      hintText: 'People, Objects, Places...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _isSearchFieldNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 20.0),
+                    ),
+                    onSubmitted: (query) {
+                      // Handle search query submission
+                    },
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
