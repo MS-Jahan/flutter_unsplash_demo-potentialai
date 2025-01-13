@@ -11,6 +11,7 @@ class DetailScreen extends StatefulWidget {
     required this.title,
     required this.authorName,
     required this.dateTime,
+    required this.likes,
   });
 
   final String? imageUrl;
@@ -18,6 +19,7 @@ class DetailScreen extends StatefulWidget {
   final String title;
   final String authorName;
   final String dateTime;
+  final int likes;
 
   @override
   State<DetailScreen> createState() => _DetailScreenState();
@@ -28,6 +30,7 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
   bool _isZoomed = false;
   bool _isSaving = false;
   bool _isSharing = false;
+  bool _showOverlay = true;
   TapDownDetails? _doubleTapDetails;
   late final AnimationController _animationController;
 
@@ -178,6 +181,7 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
     // Update zoom state
     setState(() {
       _isZoomed = !_isZoomed;
+      _toggleOverlay();
     });
   }
 
@@ -185,6 +189,8 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
     final scale = _transformationController.value.getMaxScaleOnAxis();
     setState(() {
       _isZoomed = scale > 1.0;
+      // Show overlay if zoomed in, hide if zoomed out
+      _showOverlay = !_isZoomed;
     });
   }
 
@@ -192,42 +198,46 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
     final scale = _transformationController.value.getMaxScaleOnAxis();
     setState(() {
       _isZoomed = scale > 1.0;
+      // Show overlay if zoomed in, hide if zoomed out
+      _showOverlay = !_isZoomed;
+    });
+  }
+
+  void _toggleOverlay() {
+    setState(() {
+      _showOverlay = !_showOverlay;
     });
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kToolbarHeight),
-        child: AnimatedOpacity(
-          opacity: _isZoomed ? 0.0 : 1.0,
-          duration: const Duration(milliseconds: 200),
-          child: AppBar(
-            backgroundColor: const Color.fromARGB(0, 51, 51, 51),
-            elevation: 0,
-            iconTheme: const IconThemeData(color: Colors.white70),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Text(
-                //   widget.title,
-                //   style: const TextStyle(color: Colors.white70),
-                // ),
-                Text(
-                  widget.authorName,
-                  style: const TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-                Text(
-                  widget.dateTime,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
-            ),
-            actions: [
-              IconButton(
-                icon: _isSaving 
+Widget build(BuildContext context) {
+  return Scaffold(
+    extendBodyBehindAppBar: true,
+    appBar: PreferredSize(
+      preferredSize: const Size.fromHeight(kToolbarHeight),
+      child: AnimatedOpacity(
+        opacity: _isZoomed ? 0.0 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        child: AppBar(
+          backgroundColor: const Color.fromARGB(0, 51, 51, 51),
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white70),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.authorName,
+                style: const TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+              Text(
+                widget.dateTime,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            ],
+          ),
+          actions: [
+            IconButton(
+              icon: _isSaving
                   ? const SizedBox(
                       width: 24,
                       height: 24,
@@ -240,10 +250,10 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
                       Icons.download,
                       color: Colors.white70,
                     ),
-                onPressed: _isSaving ? null : _saveImage,
-              ),
-              IconButton(
-                icon: _isSharing
+              onPressed: _isSaving ? null : _saveImage,
+            ),
+            IconButton(
+              icon: _isSharing
                   ? const SizedBox(
                       width: 24,
                       height: 24,
@@ -256,51 +266,87 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
                       Icons.share,
                       color: Colors.white70,
                     ),
-                onPressed: _isSharing ? null : _shareImage,
-              ),
-            ],
-          ),
+              onPressed: _isSharing ? null : _shareImage,
+            ),
+          ],
         ),
       ),
-      body: Container(
+    ),
+    body: GestureDetector(
+      onDoubleTapDown: _handleDoubleTapDown,
+      onDoubleTap: _handleDoubleTap,
+      onTap: _toggleOverlay,
+      child: Container(
         color: Colors.black,
-        child: GestureDetector(
-          onDoubleTapDown: _handleDoubleTapDown,
-          onDoubleTap: _handleDoubleTap,
-          child: InteractiveViewer(
-            transformationController: _transformationController,
-            minScale: 0.5,
-            maxScale: 4.0,
-            onInteractionUpdate: _handleInteractionUpdate,
-            onInteractionEnd: _handleInteractionEnd,
-            child: Center(
-              child: CachedNetworkImage(
-                imageUrl: widget.imageUrl ?? widget.rawImageUrl!,
-                placeholder: (context, url) => const Center(
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              transformationController: _transformationController,
+              minScale: 1.0,
+              maxScale: 4.0,
+              onInteractionUpdate: _handleInteractionUpdate,
+              onInteractionEnd: _handleInteractionEnd,
+              child: Center(
+                child: CachedNetworkImage(
+                  imageUrl: widget.imageUrl ?? widget.rawImageUrl!,
+                  placeholder: (context, url) => const Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-                errorWidget: (context, url, error) => Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      color: Colors.red,
-                      size: 60,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Failed to load image',
-                      style: TextStyle(color: Colors.red[300]),
-                    ),
-                  ],
+                  errorWidget: (context, url, error) => Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 60,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Failed to load image',
+                        style: TextStyle(color: Colors.red[300]),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
+            // Overlay at the bottom of the screen
+            // Overlay at the bottom of the screen
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: AnimatedOpacity(
+                opacity: _showOverlay ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: Container(
+                  padding: const EdgeInsets.all(16.0),
+                  color: Colors.black54,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.title,
+                        style: const TextStyle(color: Colors.white, fontSize: 18),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${widget.likes} likes',
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 }

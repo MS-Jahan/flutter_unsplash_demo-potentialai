@@ -172,6 +172,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     title: photo.description ?? photo.altDescription ?? 'Photo by ${photo.user.name}',
                     authorName: photo.user.name,
                     dateTime: photo.updatedAt != null ? DateFormat('dd MMM, yyyy').format(photo.updatedAt!) : '',
+                    likes: photo.likes ?? 0,
                   ),
                 ),
               ),
