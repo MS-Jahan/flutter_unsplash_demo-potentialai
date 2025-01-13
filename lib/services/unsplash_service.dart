@@ -77,6 +77,31 @@ class UnsplashService {
     }
   }
 
+  Future<List<Photo>> searchPhotos(String query, {int page = 1, int perPage = 40}) async {
+    try {
+      final url = '$_baseUrl/search/photos?query=$query&page=$page&per_page=$perPage';
+      dev.log('Search URL: $url');
+      final response = await _client.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Client-ID ${AppConfig.unsplashAccessKey}',
+          'Accept-Version': 'v1',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // dev.log('Search response: ${response.body}');
+        final Map<String, dynamic> data = json.decode(response.body);
+        final List<dynamic> results = data['results'];
+        return results.map((json) => Photo.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to search photos: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Failed to search photos: $e');
+    }
+  }
+
   Future<void> _refreshFirstPageInBackground(int perPage) async {
     try {
       final freshPhotos = await _fetchPhotos(page: 1, perPage: perPage);
@@ -90,4 +115,4 @@ class UnsplashService {
   void dispose() {
     _client.close();
   }
-} 
+}
