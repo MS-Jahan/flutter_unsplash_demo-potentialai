@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../services/gallery_service.dart';
 
 class DetailScreen extends StatefulWidget {
   const DetailScreen({
     super.key,
-    this.imageUrl,
-    this.rawImageUrl,
-    this.title = '',
+    required this.imageUrl,
+    required this.rawImageUrl,
+    required this.title,
   });
 
   final String? imageUrl;
@@ -18,9 +19,9 @@ class DetailScreen extends StatefulWidget {
 }
 
 class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMixin {
+  final _transformationController = TransformationController();
   bool _isZoomed = false;
   bool _isSaving = false;
-  final TransformationController _transformationController = TransformationController();
   TapDownDetails? _doubleTapDetails;
   late final AnimationController _animationController;
 
@@ -42,24 +43,31 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
   }
 
   Future<void> _saveImage() async {
-    if (widget.imageUrl == null || _isSaving) return;
+    if (_isSaving) return;
 
     setState(() => _isSaving = true);
-
     try {
-      final (success, message) = await GalleryService.saveImage(
-        widget.rawImageUrl!,
+      await GalleryService.saveImage(
+        widget.rawImageUrl ?? widget.imageUrl!,
         'unsplash_${DateTime.now().millisecondsSinceEpoch}',
       );
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: success ? Colors.green : Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Image saved to gallery'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -119,112 +127,110 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
     });
   }
 
-  void _onInteractionUpdate(ScaleUpdateDetails details) {
+  void _handleInteractionUpdate(ScaleUpdateDetails details) {
     final scale = _transformationController.value.getMaxScaleOnAxis();
-    final isZoomed = scale > 1.0;
-    if (_isZoomed != isZoomed) {
-      setState(() => _isZoomed = isZoomed);
-    }
+    setState(() {
+      _isZoomed = scale > 1.0;
+    });
   }
 
-  void _onInteractionEnd(ScaleEndDetails details) {
+  void _handleInteractionEnd(ScaleEndDetails details) {
     final scale = _transformationController.value.getMaxScaleOnAxis();
-    if (scale <= 1.0 && _isZoomed) {
-      setState(() => _isZoomed = false);
-    }
+    setState(() {
+      _isZoomed = scale > 1.0;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: _isZoomed ? null : AppBar(
-        title: Text(widget.title.isNotEmpty ? widget.title : 'Photo Detail'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          IconButton(
-            icon: _isSaving 
-              ? const SizedBox(
-                  width: 24,
-                  height: 24,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: AnimatedOpacity(
+          opacity: _isZoomed ? 0.0 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          child: AppBar(
+            backgroundColor: const Color.fromARGB(0, 51, 51, 51),
+            elevation: 0,
+            iconTheme: const IconThemeData(color: Colors.white70),
+            title: Text(
+              widget.title,
+              style: const TextStyle(color: Colors.white70),
+            ),
+            actions: [
+              IconButton(
+                icon: _isSaving 
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white70,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.download,
+                      color: Colors.white70,
+                    ),
+                onPressed: _isSaving ? null : _saveImage,
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.share,
+                  color: Colors.white70,
+                ),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Share feature coming soon'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      body: Container(
+        color: Colors.black,
+        child: GestureDetector(
+          onDoubleTapDown: _handleDoubleTapDown,
+          onDoubleTap: _handleDoubleTap,
+          child: InteractiveViewer(
+            transformationController: _transformationController,
+            minScale: 0.5,
+            maxScale: 4.0,
+            onInteractionUpdate: _handleInteractionUpdate,
+            onInteractionEnd: _handleInteractionEnd,
+            child: Center(
+              child: CachedNetworkImage(
+                imageUrl: widget.imageUrl ?? widget.rawImageUrl!,
+                placeholder: (context, url) => const Center(
                   child: CircularProgressIndicator(
-                    strokeWidth: 2,
                     color: Colors.white,
                   ),
-                )
-              : const Icon(Icons.download),
-            onPressed: _isSaving ? null : _saveImage,
-          ),
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Share coming soon'),
-                  duration: Duration(seconds: 1),
                 ),
-              );
-            },
-          ),
-        ],
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return GestureDetector(
-            onDoubleTapDown: _handleDoubleTapDown,
-            onDoubleTap: _handleDoubleTap,
-            child: InteractiveViewer(
-              transformationController: _transformationController,
-              minScale: 0.5,
-              maxScale: 4.0,
-              onInteractionUpdate: _onInteractionUpdate,
-              onInteractionEnd: _onInteractionEnd,
-              child: Container(
-                width: constraints.maxWidth,
-                height: constraints.maxHeight,
-                child: widget.imageUrl != null
-                  ? Image.network(
-                      widget.imageUrl!,
-                      fit: BoxFit.contain,
-                      width: constraints.maxWidth,
-                      height: constraints.maxHeight,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                                : null,
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              color: Colors.red,
-                              size: 60,
-                            ),
-                            SizedBox(height: 16),
-                            Text('Failed to load image'),
-                          ],
-                        );
-                      },
-                    )
-                  : const Center(
-                      child: Icon(
-                        Icons.image_not_supported,
-                        size: 100,
-                        color: Colors.grey,
-                      ),
+                errorWidget: (context, url, error) => Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 60,
                     ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Failed to load image',
+                      style: TextStyle(color: Colors.red[300]),
+                    ),
+                  ],
+                ),
               ),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }

@@ -1,18 +1,24 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/photo.dart';
 import '../services/unsplash_service.dart';
 import 'detail_screen.dart';
 
 class GalleryScreen extends StatefulWidget {
-  const GalleryScreen({super.key});
+  const GalleryScreen({
+    super.key,
+    UnsplashService? unsplashService,
+  }) : _unsplashService = unsplashService;
+
+  final UnsplashService? _unsplashService;
 
   @override
   State<GalleryScreen> createState() => _GalleryScreenState();
 }
 
 class _GalleryScreenState extends State<GalleryScreen> {
-  final UnsplashService _unsplashService = UnsplashService();
+  late final UnsplashService _unsplashService;
   final List<Photo> _photos = [];
   final ScrollController _scrollController = ScrollController();
   
@@ -24,6 +30,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   @override
   void initState() {
     super.initState();
+    _unsplashService = widget._unsplashService ?? UnsplashService();
     _scrollController.addListener(_scrollListener);
     _loadPhotos();
   }
@@ -145,27 +152,22 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        Image.network(
-                          photo.urls['thumb']!,
+                        CachedNetworkImage(
+                          imageUrl: photo.urls['thumb']!,
                           fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Container(
-                              color: Colors.grey[300],
-                              child: const Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                            );
-                          },
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey[300],
-                              child: const Icon(
-                                Icons.error_outline,
-                                color: Colors.red,
-                              ),
-                            );
-                          },
+                          placeholder: (context, url) => Container(
+                            color: Colors.grey[300],
+                            child: const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: Colors.grey[300],
+                            child: const Icon(
+                              Icons.error_outline,
+                              color: Colors.red,
+                            ),
+                          ),
                         ),
                         Material(
                           color: Colors.transparent,
