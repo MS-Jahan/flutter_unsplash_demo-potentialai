@@ -237,6 +237,28 @@ Widget build(BuildContext context) {
           ),
           actions: [
             IconButton(
+              icon: const Icon(
+                Icons.info_outline,
+                color: Colors.white70,
+              ),
+              onPressed: () {
+                // Handle info button press
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Image Info'),
+                    content: Text('Title: ${widget.title}\nAuthor: ${widget.authorName}\nDate: ${widget.dateTime}\nLikes: ${widget.likes}'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            IconButton(
               icon: _isSaving
                   ? const SizedBox(
                       width: 24,
@@ -322,14 +344,14 @@ Widget build(BuildContext context) {
                 opacity: _showOverlay ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 200),
                 child: Container(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(25.0),
                   color: Colors.black54,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         widget.title,
-                        style: const TextStyle(color: Colors.white, fontSize: 18),
+                        style: const TextStyle(color: Colors.white70, fontSize: 18),
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -341,7 +363,6 @@ Widget build(BuildContext context) {
                 ),
               ),
             ),
-
           ],
         ),
       ),
