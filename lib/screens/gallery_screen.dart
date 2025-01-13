@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -6,91 +7,100 @@ import '../services/unsplash_service.dart';
 import 'detail_screen.dart';
 
 class GalleryScreen extends StatefulWidget {
-  const GalleryScreen({
-    super.key,
-    UnsplashService? unsplashService,
-  }) : _unsplashService = unsplashService;
-
-  final UnsplashService? _unsplashService;
+  const GalleryScreen({super.key});
 
   @override
   State<GalleryScreen> createState() => _GalleryScreenState();
 }
 
 class _GalleryScreenState extends State<GalleryScreen> {
-  late final UnsplashService _unsplashService;
+  final UnsplashService _unsplashService = UnsplashService();
   final List<Photo> _photos = [];
-  final ScrollController _scrollController = ScrollController();
-  
   bool _isLoading = false;
-  bool _hasMore = true;
-  String? _error;
+  bool _hasError = false;
+  String _errorMessage = '';
   int _currentPage = 1;
+  final ScrollController _scrollController = ScrollController();
+  static const int _photosPerPage = 20;
 
   @override
   void initState() {
     super.initState();
-    _unsplashService = widget._unsplashService ?? UnsplashService();
-    _scrollController.addListener(_scrollListener);
+    _setupScrollListener();
+    _setupBackgroundUpdateListener();
     _loadPhotos();
   }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
     _unsplashService.dispose();
     super.dispose();
   }
 
-  void _scrollListener() {
-    if (!_scrollController.hasClients) return;
+  void _setupBackgroundUpdateListener() {
+    _unsplashService.onPhotosUpdated = (List<Photo> freshPhotos) {
+      if (mounted) {
+        setState(() {
+          // Replace the first page of photos with fresh data
+          _photos.removeRange(0, min(_photosPerPage, _photos.length));
+          _photos.insertAll(0, freshPhotos);
+        });
+      }
+    };
+  }
 
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    final currentScroll = _scrollController.offset;
-    // Load more when reaching 80% of the list
-    if (currentScroll >= (maxScroll * 0.8) && !_isLoading && _hasMore) {
-      _loadPhotos();
-    }
+  void _setupScrollListener() {
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >= 
+          _scrollController.position.maxScrollExtent * 0.8 &&
+          !_isLoading) {
+        _loadMorePhotos();
+      }
+    });
   }
 
   Future<void> _loadPhotos() async {
-    if (_isLoading || !_hasMore) return;
+    if (_isLoading) return;
 
     setState(() {
       _isLoading = true;
-      _error = null;
+      _hasError = false;
+      _errorMessage = '';
     });
 
     try {
       final photos = await _unsplashService.getPhotos(
         page: _currentPage,
-        perPage: 20,
+        perPage: _photosPerPage,
       );
       
-      setState(() {
-        if (photos.isEmpty) {
-          _hasMore = false;
-        } else {
+      if (mounted) {
+        setState(() {
           _photos.addAll(photos);
           _currentPage++;
-        }
-        _isLoading = false;
-      });
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  Future<void> _refreshList() async {
+  Future<void> _loadMorePhotos() async {
+    await _loadPhotos();
+  }
+
+  Future<void> _refreshPhotos() async {
     setState(() {
       _photos.clear();
       _currentPage = 1;
-      _hasMore = true;
-      _error = null;
     });
     await _loadPhotos();
   }
@@ -100,98 +110,93 @@ class _GalleryScreenState extends State<GalleryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Unsplash Gallery'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshPhotos,
+          ),
+        ],
       ),
-      body: _error != null && _photos.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    color: Colors.red,
-                    size: 60,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(_error!),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _refreshList,
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: _refreshList,
-              child: GridView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(8.0),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 8.0,
-                  crossAxisSpacing: 8.0,
-                  childAspectRatio: 1.0,
-                ),
-                itemCount: _photos.length + (_hasMore ? 2 : 0),
-                itemBuilder: (context, index) {
-                  if (index >= _photos.length) {
-                    return const Card(
-                      child: Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  }
-
-                  final photo = _photos[index];
-                  return Card(
-                    clipBehavior: Clip.antiAlias,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        CachedNetworkImage(
-                          imageUrl: photo.urls['thumb']!,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            color: Colors.grey[300],
-                            child: const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                          ),
-                          errorWidget: (context, url, error) => Container(
-                            color: Colors.grey[300],
-                            child: const Icon(
-                              Icons.error_outline,
-                              color: Colors.red,
-                            ),
-                          ),
-                        ),
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => DetailScreen(
-                                    rawImageUrl: photo.urls['raw'],
-                                    imageUrl: photo.urls['full'],
-                                    title: photo.description ?? photo.alt_description ?? 'Photo by ${photo.user.name}',
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
+      body: _buildBody(),
     );
   }
+
+  Widget _buildBody() {
+    if (_hasError && _photos.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(_errorMessage),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _refreshPhotos,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _refreshPhotos,
+      child: GridView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(8),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 1,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+        ),
+        itemCount: _photos.length + (_isLoading ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index == _photos.length) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final photo = _photos[index];
+          return Card(
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+            child: GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DetailScreen(
+                    imageUrl: photo.urls['regular'],
+                    rawImageUrl: photo.urls['raw'],
+                    title: photo.description ?? photo.altDescription ?? 'Photo by ${photo.user.name}',
+                  ),
+                ),
+              ),
+              child: Hero(
+                tag: photo.id,
+                child: CachedNetworkImage(
+                  imageUrl: photo.urls['small']!,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey[300],
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey[300],
+                    child: const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
 } 

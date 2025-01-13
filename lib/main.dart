@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'config/app_config.dart';
 import 'screens/gallery_screen.dart';
+import 'services/cache_service.dart';
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   // Load environment variables
   await dotenv.load(fileName: ".env");
-  
   // Validate configuration before running the app
   AppConfig.validateConfig();
+  await CacheService.init();
   runApp(const UnsplashGalleryApp());
 }
 

@@ -28,19 +28,30 @@ import 'package:mockito/mockito.dart' as _i1;
 /// See the documentation for Mockito's code generation for more information.
 class MockUnsplashService extends _i1.Mock implements _i2.UnsplashService {
   @override
-  _i3.Future<List<_i4.Photo>> getPhotos({int? page = 1, int? perPage = 10}) =>
+  _i3.Future<List<_i4.Photo>> getPhotos({
+    int? page = 1,
+    int? perPage = 10,
+  }) =>
       (super.noSuchMethod(
-            Invocation.method(#getPhotos, [], {#page: page, #perPage: perPage}),
-            returnValue: _i3.Future<List<_i4.Photo>>.value(<_i4.Photo>[]),
-            returnValueForMissingStub: _i3.Future<List<_i4.Photo>>.value(
-              <_i4.Photo>[],
-            ),
-          )
-          as _i3.Future<List<_i4.Photo>>);
+        Invocation.method(
+          #getPhotos,
+          [],
+          {
+            #page: page,
+            #perPage: perPage,
+          },
+        ),
+        returnValue: _i3.Future<List<_i4.Photo>>.value(<_i4.Photo>[]),
+        returnValueForMissingStub:
+            _i3.Future<List<_i4.Photo>>.value(<_i4.Photo>[]),
+      ) as _i3.Future<List<_i4.Photo>>);
 
   @override
   void dispose() => super.noSuchMethod(
-    Invocation.method(#dispose, []),
-    returnValueForMissingStub: null,
-  );
+        Invocation.method(
+          #dispose,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
 }
