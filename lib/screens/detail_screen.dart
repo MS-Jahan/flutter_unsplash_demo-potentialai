@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../services/gallery_service.dart';
+import '../services/share_service.dart';
 
 class DetailScreen extends StatefulWidget {
   const DetailScreen({
@@ -22,6 +23,7 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
   final _transformationController = TransformationController();
   bool _isZoomed = false;
   bool _isSaving = false;
+  bool _isSharing = false;
   TapDownDetails? _doubleTapDetails;
   late final AnimationController _animationController;
 
@@ -38,7 +40,9 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
   void dispose() {
     _transformationController.dispose();
     _animationController.dispose();
-    GalleryService.dispose();
+    // GalleryService.dispose();
+    // Only dispose GalleryService when leaving the screen
+    // as it might be needed for sharing
     super.dispose();
   }
 
@@ -71,6 +75,31 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  Future<void> _shareImage() async {
+    if (_isSharing) return;
+
+    setState(() => _isSharing = true);
+    try {
+      await ShareService.shareImage(
+        widget.rawImageUrl ?? widget.imageUrl!,
+        widget.title,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to share image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSharing = false);
       }
     }
   }
@@ -176,18 +205,20 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
                 onPressed: _isSaving ? null : _saveImage,
               ),
               IconButton(
-                icon: const Icon(
-                  Icons.share,
-                  color: Colors.white70,
-                ),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Share feature coming soon'),
-                      duration: Duration(seconds: 1),
+                icon: _isSharing
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white70,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.share,
+                      color: Colors.white70,
                     ),
-                  );
-                },
+                onPressed: _isSharing ? null : _shareImage,
               ),
             ],
           ),
