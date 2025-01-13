@@ -188,6 +188,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                     authorName: photo.user.name,
                     dateTime: photo.updatedAt != null ? DateFormat('dd MMM, yyyy').format(photo.updatedAt!) : '',
                     likes: photo.likes ?? 0,
+                    tag: photo.id, // Pass the tag to the DetailScreen
                   ),
                 ),
               ),

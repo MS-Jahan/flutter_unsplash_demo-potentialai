@@ -8,6 +8,7 @@ import '../services/unsplash_service.dart';
 import 'detail_screen.dart';
 import 'search_results_screen.dart';
 import '../screens/settings_screen.dart';
+import 'dart:developer' as dev;
 
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});
@@ -294,8 +295,9 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
           if (index == _photos.length) {
             return const Center(child: CircularProgressIndicator());
           }
-
+  
           final photo = _photos[index];
+          final uniqueTag = '${photo.id}_$index'; // Create a unique tag
           return Card(
             clipBehavior: Clip.antiAlias,
             shape: RoundedRectangleBorder(
@@ -312,23 +314,27 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
                     authorName: photo.user.name,
                     dateTime: photo.updatedAt != null ? DateFormat('dd MMM, yyyy').format(photo.updatedAt!) : '',
                     likes: photo.likes ?? 0,
+                    tag: uniqueTag, // Pass the unique tag to the DetailScreen
                   ),
                 ),
               ),
-              child: CachedNetworkImage(
-                imageUrl: photo.urls['small']!,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey[300],
-                  child: const Center(
-                    child: CircularProgressIndicator(),
+              child: Hero(
+                tag: uniqueTag,
+                child: CachedNetworkImage(
+                  imageUrl: photo.urls['small']!,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey[300],
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
                   ),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: Colors.grey[300],
-                  child: const Icon(
-                    Icons.error_outline,
-                    color: Colors.red,
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey[300],
+                    child: const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                    ),
                   ),
                 ),
               ),
