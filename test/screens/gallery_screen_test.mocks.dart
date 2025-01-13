@@ -28,6 +28,16 @@ import 'package:mockito/mockito.dart' as _i1;
 /// See the documentation for Mockito's code generation for more information.
 class MockUnsplashService extends _i1.Mock implements _i2.UnsplashService {
   @override
+  set onPhotosUpdated(_i2.PhotoUpdateCallback? _onPhotosUpdated) =>
+      super.noSuchMethod(
+        Invocation.setter(
+          #onPhotosUpdated,
+          _onPhotosUpdated,
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
   _i3.Future<List<_i4.Photo>> getPhotos({
     int? page = 1,
     int? perPage = 10,
@@ -36,6 +46,26 @@ class MockUnsplashService extends _i1.Mock implements _i2.UnsplashService {
         Invocation.method(
           #getPhotos,
           [],
+          {
+            #page: page,
+            #perPage: perPage,
+          },
+        ),
+        returnValue: _i3.Future<List<_i4.Photo>>.value(<_i4.Photo>[]),
+        returnValueForMissingStub:
+            _i3.Future<List<_i4.Photo>>.value(<_i4.Photo>[]),
+      ) as _i3.Future<List<_i4.Photo>>);
+
+  @override
+  _i3.Future<List<_i4.Photo>> searchPhotos(
+    String? query, {
+    int? page = 1,
+    int? perPage = 40,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #searchPhotos,
+          [query],
           {
             #page: page,
             #perPage: perPage,

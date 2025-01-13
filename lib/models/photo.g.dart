@@ -25,13 +25,14 @@ class PhotoAdapter extends TypeAdapter<Photo> {
       color: fields[5] as String?,
       likes: fields[6] as int?,
       user: fields[7] as PhotoUser,
+      updatedAt: fields[8] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Photo obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,7 +48,9 @@ class PhotoAdapter extends TypeAdapter<Photo> {
       ..writeByte(6)
       ..write(obj.likes)
       ..writeByte(7)
-      ..write(obj.user);
+      ..write(obj.user)
+      ..writeByte(8)
+      ..write(obj.updatedAt);
   }
 
   @override
