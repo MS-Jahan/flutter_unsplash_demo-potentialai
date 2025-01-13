@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'detail_screen.dart';
 
 class GalleryScreen extends StatelessWidget {
   const GalleryScreen({super.key});
@@ -46,11 +47,13 @@ class GalleryScreen extends StatelessWidget {
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () {
-                      // TODO: Navigate to detail screen
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Image detail view coming soon'),
-                          duration: Duration(seconds: 1),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const DetailScreen(
+                            // TODO: Pass actual image URL and title
+                            title: 'Sample Photo',
+                          ),
                         ),
                       );
                     },
