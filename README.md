@@ -10,7 +10,7 @@ A modern Flutter application showcasing photo gallery functionality using the Un
 - Photo sharing functionality
 - API response caching
 - Image caching
-- Comprehensive unit tests (in process)
+- Comprehensive unit tests (incomplete; in process)
 
 ## 📱 Main Functionalities
 
