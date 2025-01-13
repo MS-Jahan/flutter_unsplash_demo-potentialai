@@ -146,7 +146,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                       fit: StackFit.expand,
                       children: [
                         Image.network(
-                          photo.urls['regular']!,
+                          photo.urls['thumb']!,
                           fit: BoxFit.cover,
                           loadingBuilder: (context, child, loadingProgress) {
                             if (loadingProgress == null) return child;
@@ -175,6 +175,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => DetailScreen(
+                                    rawImageUrl: photo.urls['raw'],
                                     imageUrl: photo.urls['full'],
                                     title: photo.description ?? photo.alt_description ?? 'Photo by ${photo.user.name}',
                                   ),

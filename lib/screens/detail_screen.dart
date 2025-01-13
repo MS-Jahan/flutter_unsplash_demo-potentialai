@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import '../services/gallery_service.dart';
 
 class DetailScreen extends StatefulWidget {
   const DetailScreen({
     super.key,
     this.imageUrl,
+    this.rawImageUrl,
     this.title = '',
   });
 
   final String? imageUrl;
+  final String? rawImageUrl;
   final String title;
 
   @override
@@ -16,6 +19,7 @@ class DetailScreen extends StatefulWidget {
 
 class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMixin {
   bool _isZoomed = false;
+  bool _isSaving = false;
   final TransformationController _transformationController = TransformationController();
   TapDownDetails? _doubleTapDetails;
   late final AnimationController _animationController;
@@ -33,7 +37,34 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
   void dispose() {
     _transformationController.dispose();
     _animationController.dispose();
+    GalleryService.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveImage() async {
+    if (widget.imageUrl == null || _isSaving) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      final (success, message) = await GalleryService.saveImage(
+        widget.rawImageUrl!,
+        'unsplash_${DateTime.now().millisecondsSinceEpoch}',
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: success ? Colors.green : Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
 
   void _handleDoubleTapDown(TapDownDetails details) {
@@ -112,15 +143,17 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
-            icon: const Icon(Icons.download),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Download coming soon'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
-            },
+            icon: _isSaving 
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.download),
+            onPressed: _isSaving ? null : _saveImage,
           ),
           IconButton(
             icon: const Icon(Icons.share),
