@@ -28,6 +28,9 @@ class Photo {
   @HiveField(7)
   final PhotoUser user;
 
+  @HiveField(8)
+  final DateTime? updatedAt;
+
   Photo({
     required this.id,
     this.description,
@@ -37,6 +40,7 @@ class Photo {
     this.color,
     this.likes,
     required this.user,
+    this.updatedAt,
   });
 
   factory Photo.fromJson(Map<String, dynamic> json) {
@@ -49,6 +53,7 @@ class Photo {
       color: json['color'] as String?,
       likes: json['likes'] as int?,
       user: PhotoUser.fromJson(json['user'] as Map<String, dynamic>),
+      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
     );
   }
 }

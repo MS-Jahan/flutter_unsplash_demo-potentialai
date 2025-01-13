@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 import '../models/photo.dart';
 import '../services/unsplash_service.dart';
 import 'detail_screen.dart';
@@ -169,6 +170,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     imageUrl: photo.urls['regular'],
                     rawImageUrl: photo.urls['raw'],
                     title: photo.description ?? photo.altDescription ?? 'Photo by ${photo.user.name}',
+                    authorName: photo.user.name,
+                    dateTime: photo.updatedAt != null ? DateFormat('dd MMM, yyyy').format(photo.updatedAt!) : '',
                   ),
                 ),
               ),
@@ -199,4 +202,4 @@ class _GalleryScreenState extends State<GalleryScreen> {
     );
   }
 
-} 
+}

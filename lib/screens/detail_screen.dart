@@ -9,11 +9,15 @@ class DetailScreen extends StatefulWidget {
     required this.imageUrl,
     required this.rawImageUrl,
     required this.title,
+    required this.authorName,
+    required this.dateTime,
   });
 
   final String? imageUrl;
   final String? rawImageUrl;
   final String title;
+  final String authorName;
+  final String dateTime;
 
   @override
   State<DetailScreen> createState() => _DetailScreenState();
@@ -204,9 +208,22 @@ class _DetailScreenState extends State<DetailScreen> with TickerProviderStateMix
             backgroundColor: const Color.fromARGB(0, 51, 51, 51),
             elevation: 0,
             iconTheme: const IconThemeData(color: Colors.white70),
-            title: Text(
-              widget.title,
-              style: const TextStyle(color: Colors.white70),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Text(
+                //   widget.title,
+                //   style: const TextStyle(color: Colors.white70),
+                // ),
+                Text(
+                  widget.authorName,
+                  style: const TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+                Text(
+                  widget.dateTime,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
             ),
             actions: [
               IconButton(
