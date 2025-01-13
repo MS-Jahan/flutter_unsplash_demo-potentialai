@@ -14,17 +14,41 @@ class GalleryScreen extends StatefulWidget {
 class _GalleryScreenState extends State<GalleryScreen> {
   final UnsplashService _unsplashService = UnsplashService();
   final List<Photo> _photos = [];
+  final ScrollController _scrollController = ScrollController();
+  
   bool _isLoading = false;
+  bool _hasMore = true;
   String? _error;
+  int _currentPage = 1;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_scrollListener);
     _loadPhotos();
   }
 
+  @override
+  void dispose() {
+    _scrollController.removeListener(_scrollListener);
+    _scrollController.dispose();
+    _unsplashService.dispose();
+    super.dispose();
+  }
+
+  void _scrollListener() {
+    if (!_scrollController.hasClients) return;
+
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    // Load more when reaching 80% of the list
+    if (currentScroll >= (maxScroll * 0.8) && !_isLoading && _hasMore) {
+      _loadPhotos();
+    }
+  }
+
   Future<void> _loadPhotos() async {
-    if (_isLoading) return;
+    if (_isLoading || !_hasMore) return;
 
     setState(() {
       _isLoading = true;
@@ -32,9 +56,18 @@ class _GalleryScreenState extends State<GalleryScreen> {
     });
 
     try {
-      final photos = await _unsplashService.getPhotos();
+      final photos = await _unsplashService.getPhotos(
+        page: _currentPage,
+        perPage: 20,
+      );
+      
       setState(() {
-        _photos.addAll(photos);
+        if (photos.isEmpty) {
+          _hasMore = false;
+        } else {
+          _photos.addAll(photos);
+          _currentPage++;
+        }
         _isLoading = false;
       });
     } catch (e) {
@@ -45,10 +78,14 @@ class _GalleryScreenState extends State<GalleryScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _unsplashService.dispose();
-    super.dispose();
+  Future<void> _refreshList() async {
+    setState(() {
+      _photos.clear();
+      _currentPage = 1;
+      _hasMore = true;
+      _error = null;
+    });
+    await _loadPhotos();
   }
 
   @override
@@ -58,7 +95,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
         title: const Text('Unsplash Gallery'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: _error != null
+      body: _error != null && _photos.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -72,81 +109,85 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   Text(_error!),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: _loadPhotos,
+                    onPressed: _refreshList,
                     child: const Text('Retry'),
                   ),
                 ],
               ),
             )
-          : GridView.builder(
-              padding: const EdgeInsets.all(8.0),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 8.0,
-                crossAxisSpacing: 8.0,
-                childAspectRatio: 1.0,
-              ),
-              itemCount: _photos.length + (_isLoading ? 2 : 0),
-              itemBuilder: (context, index) {
-                if (index >= _photos.length) {
-                  return const Card(
-                    child: Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  );
-                }
-
-                final photo = _photos[index];
-                return Card(
-                  clipBehavior: Clip.antiAlias,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.network(
-                        photo.urls['regular']!,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Container(
-                            color: Colors.grey[300],
-                            child: const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey[300],
-                            child: const Icon(
-                              Icons.error_outline,
-                              color: Colors.red,
-                            ),
-                          );
-                        },
+          : RefreshIndicator(
+              onRefresh: _refreshList,
+              child: GridView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(8.0),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 8.0,
+                  crossAxisSpacing: 8.0,
+                  childAspectRatio: 1.0,
+                ),
+                itemCount: _photos.length + (_hasMore ? 2 : 0),
+                itemBuilder: (context, index) {
+                  if (index >= _photos.length) {
+                    return const Card(
+                      child: Center(
+                        child: CircularProgressIndicator(),
                       ),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => DetailScreen(
-                                  imageUrl: photo.urls['full'],
-                                  title: photo.description ?? photo.alt_description ?? 'Photo by ${photo.user.name}',
-                                ),
+                    );
+                  }
+
+                  final photo = _photos[index];
+                  return Card(
+                    clipBehavior: Clip.antiAlias,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.network(
+                          photo.urls['regular']!,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              color: Colors.grey[300],
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[300],
+                              child: const Icon(
+                                Icons.error_outline,
+                                color: Colors.red,
                               ),
                             );
                           },
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => DetailScreen(
+                                    imageUrl: photo.urls['full'],
+                                    title: photo.description ?? photo.alt_description ?? 'Photo by ${photo.user.name}',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
     );
   }
