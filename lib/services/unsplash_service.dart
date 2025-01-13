@@ -24,7 +24,7 @@ class UnsplashService {
     final hasInternet = await _hasInternetConnection();
     final cachedPhotos = await CacheService.getCachedPhotos();
 
-    if (page == 1) {
+    if (page <= 2) {
       if (hasInternet) {
         // If we have cached data, return it immediately and refresh in background
         if (cachedPhotos != null) {
@@ -63,8 +63,8 @@ class UnsplashService {
         final List<dynamic> data = json.decode(response.body);
         final photos = data.map((json) => Photo.fromJson(json)).toList();
         
-        // Cache only the first page
-        if (page == 1) {
+        // Cache only the first 2 pages
+        if (page <= 2) {
           await CacheService.cachePhotos(photos);
         }
 
@@ -80,7 +80,7 @@ class UnsplashService {
   Future<List<Photo>> searchPhotos(String query, {int page = 1, int perPage = 40}) async {
     try {
       final url = '$_baseUrl/search/photos?query=$query&page=$page&per_page=$perPage';
-      dev.log('Search URL: $url');
+      // dev.log('Search URL: $url');
       final response = await _client.get(
         Uri.parse(url),
         headers: {
