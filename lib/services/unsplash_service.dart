@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../config/app_config.dart';
 import '../models/photo.dart';
 import 'cache_service.dart';
-// import 'dart:developer' as dev;
+import 'dart:developer' as dev;
 
 typedef PhotoUpdateCallback = void Function(List<Photo> photos);
 
@@ -21,39 +21,45 @@ class UnsplashService {
     return connectivityResult != ConnectivityResult.none;
   }
 
-  Future<List<Photo>> getPhotos({int page = 1, int perPage = 10}) async {
+  Future<List<Photo>> getPhotos({int page = 1, int perPage = 10, bool ignoreCache = true}) async {
     final hasInternet = await _hasInternetConnection();
     final cachedPhotos = await CacheService.getCachedPhotos();
 
+    // print length of cachedPhotos
+    print("cachedPhotos length: ${cachedPhotos?.length}");
+
     if (page <= 2) {
       if (hasInternet) {
-        // If we have cached data, return it immediately and refresh in background
-        if (cachedPhotos != null) {
-          _refreshFirstPageInBackground(perPage);
+        if (cachedPhotos != null && ignoreCache == true) {
+          _refreshFirstTwoPagesInBackground(perPage);
           return cachedPhotos;
         }
-        // If no cache, fetch directly
-        return _fetchPhotos(page: page, perPage: perPage);
+        return _fetchMultiplePages(
+          pages: [page],
+          perPage: perPage,
+        );
+        } else {
+          // No internet, return cache or throw
+          if (cachedPhotos != null) {
+            return cachedPhotos;
+          }
+          throw Exception('No internet connection and no cached data available');
+        }
       } else {
-        // No internet, return cache or throw
-        if (cachedPhotos != null) {
-          return cachedPhotos;
+        // For subsequent pages, we need internet
+        if (!hasInternet) {
+          throw Exception('No internet connection available for loading more photos');
         }
-        throw Exception('No internet connection and no cached data available');
+        return _fetchPhotos(page: page, perPage: perPage);
       }
-    } else {
-      // For subsequent pages, we need internet
-      if (!hasInternet) {
-        throw Exception('No internet connection available for loading more photos');
-      }
-      return _fetchPhotos(page: page, perPage: perPage);
-    }
   }
 
   Future<List<Photo>> _fetchPhotos({required int page, required int perPage}) async {
     try {
+      final url = '$_baseUrl/photos?page=$page&per_page=$perPage';
+      dev.log('Fetch URL: $url');
       final response = await _client.get(
-        Uri.parse('$_baseUrl/photos?page=$page&per_page=$perPage'),
+        Uri.parse(url),
         headers: {
           'Authorization': 'Client-ID ${AppConfig.unsplashAccessKey}',
           'Accept-Version': 'v1',
@@ -65,6 +71,7 @@ class UnsplashService {
         final photos = data.map((json) => Photo.fromJson(json)).toList();
         
         // Cache only the first 2 pages
+        // await CacheService.cachePhotos(photos);
         if (page <= 2) {
           await CacheService.cachePhotos(photos);
         }
@@ -82,7 +89,7 @@ class UnsplashService {
   Future<List<Photo>> searchPhotos(String query, {int page = 1, int perPage = 40}) async {
     try {
       final url = '$_baseUrl/search/photos?query=$query&page=$page&per_page=$perPage';
-      // dev.log('Search URL: $url');
+      dev.log('Search URL: $url');
       final response = await _client.get(
         Uri.parse(url),
         headers: {
@@ -105,10 +112,27 @@ class UnsplashService {
     }
   }
 
-  Future<void> _refreshFirstPageInBackground(int perPage) async {
+  Future<List<Photo>> _fetchMultiplePages({
+    required List<int> pages,
+    required int perPage,
+  }) async {
     try {
-      final freshPhotos = await _fetchPhotos(page: 1, perPage: perPage);
-      onPhotosUpdated?.call(freshPhotos);
+      final futures = pages.map((page) => _fetchPhotos(page: page, perPage: perPage));
+      final results = await Future.wait(futures);
+      return results.expand((photos) => photos).toList();
+    } catch (e) {
+      print('Error fetching multiple pages: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _refreshFirstTwoPagesInBackground(int perPage) async {
+    try {
+      final allPhotos = await _fetchMultiplePages(
+        pages: [1, 2],
+        perPage: perPage,
+      );
+      onPhotosUpdated?.call(allPhotos);
     } catch (e) {
       // Silently fail as we still have cached data to show
       print('Background refresh failed: $e');

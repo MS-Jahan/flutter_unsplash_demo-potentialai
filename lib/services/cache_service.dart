@@ -17,9 +17,25 @@ class CacheService {
 
   static Future<void> cachePhotos(List<Photo> photos) async {
     final box = Hive.box(_photoBoxName);
+    final cachedData = box.get(_photoListKey);
+    List<Photo> existingPhotos = [];
+
+    if (cachedData != null) {
+      existingPhotos = (cachedData['photos'] as List).cast<Photo>();
+    }
+
+    // Remove duplicates
+    final newPhotos = photos.where((photo) => !existingPhotos.any((existingPhoto) => existingPhoto.id == photo.id)).toList();
+
+    // Append new photos
+    existingPhotos.addAll(newPhotos);
+
+    // print length of existingPhotos
+    print("existingPhotos length: ${existingPhotos.length}");
+
     await box.put(_photoListKey, {
       'timestamp': DateTime.now().toIso8601String(),
-      'photos': photos,
+      'photos': existingPhotos,
     });
   }
 
@@ -39,14 +55,24 @@ class CacheService {
   }
 
   static Future<void> clearCache() async {
-    // Clear image cache
-    await _cacheManager.emptyCache();
-    
-    // Clear Hive cache
-    Hive.box(_photoBoxName).clear();
-    Hive.box(_photoListKey).clear();
-    
-    // Clear any other possible cache
-    // Add any additional cache clearing logic here
+    try {
+      // Clear image cache
+      await _cacheManager.emptyCache();
+
+      // Clear Hive cache
+      final box = await Hive.openBox(_photoBoxName);
+      await box.clear();
+      // await box.close();
+
+      final box1 = await Hive.openBox(_photoListKey);
+      await box1.clear();
+      // await box1.close();
+      
+      print('Cache cleared successfully');
+    } catch (e) {
+      print('Error clearing cache: $e');
+      // Re-initialize if box is closed
+      await init();
+    }
   }
 }

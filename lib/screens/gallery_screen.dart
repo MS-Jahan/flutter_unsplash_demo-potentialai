@@ -30,7 +30,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
   String _errorMessage = '';
   int _currentPage = 1;
   final ScrollController _scrollController = ScrollController();
-  static const int _initialPages = 1;
+  static const int _initialPages = 2;
   static const int _photosPerPage = 20;
   bool _isSearchBarVisible = false;
   late final AnimationController _animationController;
@@ -77,11 +77,14 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
 
   void _setupBackgroundUpdateListener() {
     widget.unsplashService.onPhotosUpdated = (List<Photo> freshPhotos) {
+      print('Background update: ${freshPhotos.length} photos');
       if (mounted) {
         setState(() {
-          // Replace the first page of photos with fresh data
-          _photos.removeRange(0, min(_photosPerPage, _photos.length));
-          _photos.insertAll(0, freshPhotos);
+          // Replace the first _initialPages pages of photos with fresh data
+          final freshPhotoIds = freshPhotos.map((photo) => photo.id).toSet();
+          _photos.removeWhere((photo) => freshPhotoIds.contains(photo.id));
+          _photos.insertAll(0, freshPhotos.where((photo) => !_photos.any((existingPhoto) => existingPhoto.id == photo.id)));
+          print('Total photos: ${_photos.length}');
         });
       }
     };
@@ -108,7 +111,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
 
     try {
       for (int i = 1; i <= _initialPages; i++) {
-        final photos = await widget.unsplashService.getPhotos(page: i, perPage: _photosPerPage);
+        final photos = await widget.unsplashService.getPhotos(page: i, perPage: _photosPerPage, ignoreCache: false);
         if (mounted) {
           setState(() {
             _photos.addAll(photos);
@@ -130,7 +133,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
     }
   }
 
-  Future<void> _loadPhotos() async {
+  Future<void> _loadPhotos({bool ignoreCache = false}) async {
     if (_isLoading) return;
 
     setState(() {
@@ -143,6 +146,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
       final photos = await widget.unsplashService.getPhotos(
         page: _currentPage,
         perPage: _photosPerPage,
+        ignoreCache: ignoreCache,
       );
       
       if (mounted) {
@@ -164,7 +168,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
   }
 
   Future<void> _loadMorePhotos() async {
-    await _loadPhotos();
+    await _loadPhotos(ignoreCache: true);
   }
 
   Future<void> _refreshPhotos() async {
@@ -172,7 +176,8 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
       _photos.clear();
       _currentPage = 1;
     });
-    await _loadPhotos();
+    await _loadPhotos(ignoreCache: true);
+    await _loadPhotos(ignoreCache: true);
   }
 
   void _toggleSearchBar() {
