@@ -40,7 +40,7 @@ jobs:
 
       - name: Create .env file
         run: |
-          echo "UNSPLASH_API_KEY=${{ secrets.UNSPLASH_API_KEY }}" > .env
+          echo "UNSPLASH_ACCESS_KEY=${{ secrets.UNSPLASH_ACCESS_KEY }}" > .env
 
       - name: Install dependencies
         run: flutter pub get
