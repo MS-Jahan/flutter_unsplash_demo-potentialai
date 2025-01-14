@@ -67,4 +67,5 @@ A modern Flutter application showcasing photo gallery functionality using the Un
 1. Clone the repository
 2. Run `flutter pub get` to install dependencies
 3. Get your Unsplash API key from [Unsplash Developer](https://unsplash.com/developers) and add it to the .env file.
-4. Run the app using `flutter run`
+4. Run `flutter pub run build_runner build` to generate the Hive adapter.
+5. Run the app using `flutter run`
