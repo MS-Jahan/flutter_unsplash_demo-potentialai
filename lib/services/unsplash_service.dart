@@ -21,7 +21,8 @@ class UnsplashService {
     return connectivityResult != ConnectivityResult.none;
   }
 
-  Future<List<Photo>?> getPhotos({int page = 1, int perPage = 10, bool disableCache = true}) async {
+  Future<List<Photo>?> getPhotos(
+      {int page = 1, int perPage = 10, bool disableCache = true}) async {
     final hasInternet = await _hasInternetConnection();
     final cachedPhotos = await CacheService.getCachedPhotos();
 
@@ -30,31 +31,35 @@ class UnsplashService {
 
     if (page <= 2) {
       if (hasInternet) {
+        Future.delayed(Duration(seconds: 3), () {
           _refreshFirstTwoPagesInBackground(perPage);
-          if (cachedPhotos != null || disableCache == false) {
-            return cachedPhotos;
-          }
-          return _fetchMultiplePages(
-            pages: [page],
-            perPage: perPage,
-          );
-        } else {
-          // No internet, return cache or throw
-          if (cachedPhotos != null) {
-            return cachedPhotos;
-          }
-          throw Exception('No internet connection and no cached data available');
+        });
+        if (cachedPhotos != null || disableCache == false) {
+          return cachedPhotos;
         }
+        return _fetchMultiplePages(
+          pages: [page],
+          perPage: perPage,
+        );
       } else {
-        // For subsequent pages, we need internet
-        if (!hasInternet) {
-          throw Exception('No internet connection available for loading more photos');
+        // No internet, return cache or throw
+        if (cachedPhotos != null) {
+          return cachedPhotos;
         }
-        return _fetchPhotos(page: page, perPage: perPage);
+        throw Exception('No internet connection and no cached data available');
       }
+    } else {
+      // For subsequent pages, we need internet
+      if (!hasInternet) {
+        throw Exception(
+            'No internet connection available for loading more photos');
+      }
+      return _fetchPhotos(page: page, perPage: perPage);
+    }
   }
 
-  Future<List<Photo>> _fetchPhotos({required int page, required int perPage}) async {
+  Future<List<Photo>> _fetchPhotos(
+      {required int page, required int perPage}) async {
     try {
       final url = '$_baseUrl/photos?page=$page&per_page=$perPage';
       dev.log('Fetch URL: $url');
@@ -69,7 +74,7 @@ class UnsplashService {
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         final photos = data.map((json) => Photo.fromJson(json)).toList();
-        
+
         // Cache only the first 2 pages
         // await CacheService.cachePhotos(photos);
         if (page <= 2) {
@@ -86,9 +91,11 @@ class UnsplashService {
     }
   }
 
-  Future<List<Photo>> searchPhotos(String query, {int page = 1, int perPage = 40}) async {
+  Future<List<Photo>> searchPhotos(String query,
+      {int page = 1, int perPage = 40}) async {
     try {
-      final url = '$_baseUrl/search/photos?query=$query&page=$page&per_page=$perPage';
+      final url =
+          '$_baseUrl/search/photos?query=$query&page=$page&per_page=$perPage';
       dev.log('Search URL: $url');
       final response = await _client.get(
         Uri.parse(url),
@@ -117,7 +124,8 @@ class UnsplashService {
     required int perPage,
   }) async {
     try {
-      final futures = pages.map((page) => _fetchPhotos(page: page, perPage: perPage));
+      final futures =
+          pages.map((page) => _fetchPhotos(page: page, perPage: perPage));
       final results = await Future.wait(futures);
       return results.expand((photos) => photos).toList();
     } catch (e) {

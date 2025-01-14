@@ -75,17 +75,27 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
     super.dispose();
   }
 
+  void _addPhotosToList(List<Photo> newPhotos) {
+    if (newPhotos.isEmpty) return;
+
+    final uniquePhotos = newPhotos.where(
+      (photo) => !_photos.any((existing) => existing.id == photo.id)
+    ).toList();
+
+    if (uniquePhotos.isEmpty) return;
+
+    setState(() {
+      _photos.addAll(uniquePhotos);
+    });
+    
+    dev.log('Added ${uniquePhotos.length} unique photos. Total photos: ${_photos.length}');
+  }
+
   void _setupBackgroundUpdateListener() {
     widget.unsplashService.onPhotosUpdated = (List<Photo> freshPhotos) {
-      print('Background update: ${freshPhotos.length} photos');
+      dev.log('Background update: ${freshPhotos.length} photos');
       if (mounted) {
-        setState(() {
-          // Replace the first _initialPages pages of photos with fresh data
-          final freshPhotoIds = freshPhotos.map((photo) => photo.id).toSet();
-          _photos.removeWhere((photo) => freshPhotoIds.contains(photo.id));
-          _photos.insertAll(0, freshPhotos.where((photo) => !_photos.any((existingPhoto) => existingPhoto.id == photo.id)));
-          print('Total photos: ${_photos.length}');
-        });
+        _addPhotosToList(freshPhotos);
       }
     };
   }
@@ -112,11 +122,9 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
     try {
       for (int i = 1; i <= _initialPages; i++) {
         final photos = await widget.unsplashService.getPhotos(page: i, perPage: _photosPerPage, disableCache: false);
-        if (mounted) {
-          setState(() {
-            _photos.addAll(photos!);
-            _currentPage++;
-          });
+        if (mounted && photos != null) {
+          _addPhotosToList(photos);
+          _currentPage++;
         }
       }
       setState(() {
@@ -149,9 +157,9 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
         disableCache: disableCache,
       );
       
-      if (mounted) {
+      if (mounted && photos != null) {
+        _addPhotosToList(photos);
         setState(() {
-          _photos.addAll(photos!);
           _currentPage++;
           _isLoading = false;
         });
@@ -176,8 +184,37 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
       _photos.clear();
       _currentPage = 1;
     });
-    await _loadPhotos(disableCache: true);
-    await _loadPhotos(disableCache: true);
+    
+    // Load two pages of photos
+    final firstPage = await widget.unsplashService.getPhotos(
+      page: _currentPage,
+      perPage: _photosPerPage,
+      disableCache: true
+    );
+    
+    if (firstPage != null) {
+      _currentPage++;
+      final secondPage = await widget.unsplashService.getPhotos(
+        page: _currentPage,
+        perPage: _photosPerPage,
+        disableCache: true
+      );
+      
+      // Batch update the UI with both pages
+      if (mounted) {
+        setState(() {
+          _photos.addAll(firstPage.where(
+            (photo) => !_photos.any((existing) => existing.id == photo.id)
+          ));
+          if (secondPage != null) {
+            _photos.addAll(secondPage.where(
+              (photo) => !_photos.any((existing) => existing.id == photo.id)
+            ));
+            _currentPage++;
+          }
+        });
+      }
+    }
   }
 
   void _toggleSearchBar() {
