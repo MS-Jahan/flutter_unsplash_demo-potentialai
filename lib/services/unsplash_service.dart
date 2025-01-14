@@ -21,7 +21,7 @@ class UnsplashService {
     return connectivityResult != ConnectivityResult.none;
   }
 
-  Future<List<Photo>> getPhotos({int page = 1, int perPage = 10, bool ignoreCache = true}) async {
+  Future<List<Photo>?> getPhotos({int page = 1, int perPage = 10, bool disableCache = true}) async {
     final hasInternet = await _hasInternetConnection();
     final cachedPhotos = await CacheService.getCachedPhotos();
 
@@ -30,8 +30,8 @@ class UnsplashService {
 
     if (page <= 2) {
       if (hasInternet) {
-        if (cachedPhotos != null && ignoreCache == true) {
-          _refreshFirstTwoPagesInBackground(perPage);
+        _refreshFirstTwoPagesInBackground(perPage);
+        if (cachedPhotos != null || disableCache == false) {
           return cachedPhotos;
         }
         return _fetchMultiplePages(

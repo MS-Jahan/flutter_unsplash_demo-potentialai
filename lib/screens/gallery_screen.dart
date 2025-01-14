@@ -111,7 +111,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
 
     try {
       for (int i = 1; i <= _initialPages; i++) {
-        final photos = await widget.unsplashService.getPhotos(page: i, perPage: _photosPerPage, ignoreCache: false);
+        final photos = await widget.unsplashService.getPhotos(page: i, perPage: _photosPerPage, disableCache: false);
         if (mounted) {
           setState(() {
             _photos.addAll(photos);
@@ -133,7 +133,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
     }
   }
 
-  Future<void> _loadPhotos({bool ignoreCache = false}) async {
+  Future<void> _loadPhotos({bool disableCache = false}) async {
     if (_isLoading) return;
 
     setState(() {
@@ -146,7 +146,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
       final photos = await widget.unsplashService.getPhotos(
         page: _currentPage,
         perPage: _photosPerPage,
-        ignoreCache: ignoreCache,
+        disableCache: disableCache,
       );
       
       if (mounted) {
@@ -168,7 +168,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
   }
 
   Future<void> _loadMorePhotos() async {
-    await _loadPhotos(ignoreCache: true);
+    await _loadPhotos(disableCache: true);
   }
 
   Future<void> _refreshPhotos() async {
@@ -176,8 +176,8 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
       _photos.clear();
       _currentPage = 1;
     });
-    await _loadPhotos(ignoreCache: true);
-    await _loadPhotos(ignoreCache: true);
+    await _loadPhotos(disableCache: true);
+    await _loadPhotos(disableCache: true);
   }
 
   void _toggleSearchBar() {
