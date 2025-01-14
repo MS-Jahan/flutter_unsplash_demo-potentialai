@@ -114,7 +114,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
         final photos = await widget.unsplashService.getPhotos(page: i, perPage: _photosPerPage, disableCache: false);
         if (mounted) {
           setState(() {
-            _photos.addAll(photos);
+            _photos.addAll(photos!);
             _currentPage++;
           });
         }
@@ -151,7 +151,7 @@ class _GalleryScreenState extends State<GalleryScreen> with SingleTickerProvider
       
       if (mounted) {
         setState(() {
-          _photos.addAll(photos);
+          _photos.addAll(photos!);
           _currentPage++;
           _isLoading = false;
         });
