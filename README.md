@@ -2,6 +2,9 @@
 
 A modern Flutter application showcasing photo gallery functionality using the Unsplash API. This project demonstrates clean architecture, proper state management, and best practices in Flutter development.
 
+# Demo
+Please check out the apk build [here](https://github.com/MS-Jahan/flutter_unsplash_demo-potentialai/releases/latest).
+
 ## 🌟 Core Features
 
 - Infinite scrolling photo gallery
