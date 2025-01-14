@@ -30,14 +30,14 @@ class UnsplashService {
 
     if (page <= 2) {
       if (hasInternet) {
-        _refreshFirstTwoPagesInBackground(perPage);
-        if (cachedPhotos != null || disableCache == false) {
-          return cachedPhotos;
-        }
-        return _fetchMultiplePages(
-          pages: [page],
-          perPage: perPage,
-        );
+          _refreshFirstTwoPagesInBackground(perPage);
+          if (cachedPhotos != null || disableCache == false) {
+            return cachedPhotos;
+          }
+          return _fetchMultiplePages(
+            pages: [page],
+            perPage: perPage,
+          );
         } else {
           // No internet, return cache or throw
           if (cachedPhotos != null) {
